@@ -10,6 +10,20 @@ describe("app", () => {
       .set("Accept", "application/json")
       .expect("Content-Type", /json/)
       .expect(404));
+
+  it("serves the OpenAPI specification", async () => {
+    const response = await request(app)
+      .get("/openapi.json")
+      .set("Accept", "application/json")
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(response.body).toHaveProperty("openapi", "3.0.0");
+    expect(response.body.info).toMatchObject({
+      title: "Maps Search API",
+      version: "1.0.0",
+    });
+  });
 });
 
 describe("GET /", () => {

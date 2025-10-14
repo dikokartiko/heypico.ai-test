@@ -41,7 +41,7 @@ Compose is configured with health checks so dependent services wait for the back
 After the containers are healthy, pull a model into the running Ollama service. Example:
 
 ```bash
-docker exec -it ollama ollama pull steamdj/llama3.1-cpu-only:latest
+docker exec -it ollama ollama pull phi4-mini:3.8b
 ```
 
 Swap the model name as needed for your workload.
