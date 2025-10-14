@@ -1,0 +1,29 @@
+{
+  "name": "maps-search",
+  "description": "Find nearby locations or places and return Google Maps embed HTML.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Place to search, e.g. 'coffee shop in Jakarta'"
+      }
+    },
+    "required": ["query"]
+  },
+  "api": {
+    "method": "GET",
+    "url": "http://host.docker.internal:3001/api/maps/search?q={{query}}"
+  },
+  "examples": [
+    {
+      "input": { "query": "ramen restaurant in Jakarta" },
+      "output": {
+        "name": "RamenYA! Plaza Indonesia",
+        "address": "Jl. M.H. Thamrin No.28, Jakarta",
+        "map_link": "https://maps.google.com/?q=-6.1943,106.8227",
+        "embed_html": "<iframe ...></iframe>"
+      }
+    }
+  ]
+}
