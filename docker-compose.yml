@@ -1,4 +1,34 @@
 services:
+  maps-backend:
+    build:
+      context: ./be-express
+    container_name: maps-backend
+    restart: unless-stopped
+    init: true
+    command: ["node", "src/index.js"]
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-90000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3001/openapi.json",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
@@ -27,11 +57,12 @@ services:
       - TZ=Asia/Jakarta
       - OLLAMA_BASE_URL=http://ollama:11434
       - WEBUI_NAME=HeyPico.AI
-      - "WEBUI_SYSTEM_PROMPT=You are HeyPico.AI, a local LLM assistant connected to the user environment. You can reason about real-world locations using the maps-search tool. When the user asks about finding or recommending places, automatically call the maps-search tool with a descriptive query. After calling the tool, return the result in natural language, embed the map HTML if available, and include the map link for users to open Google Maps. Continue normal conversation for non-map requests."
+      - 'TOOL_SERVER_CONNECTIONS=[{"url":"http://maps-backend:3001","path":"openapi.json","type":"openapi","auth_type":"none","config":{"enable":true},"info":{"id":"maps-search","name":"Maps Search","description":"Google Maps search tool"}}]'
     volumes:
       - open-webui-data:/app/backend/data
-      - ./tools:/app/backend/data/tools
     depends_on:
+      maps-backend:
+        condition: service_healthy
       ollama:
         condition: service_healthy
 

@@ -3,10 +3,31 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import morgan from "morgan";
+import swaggerJsdoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
 
 import { env } from "./env.js";
 import * as middlewares from "./middlewares.js";
 import routes from "./routes/index.js";
+
+const swaggerOptions = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Maps Search API",
+      version: "1.0.0",
+      description: "Google Maps search tool for Open WebUI",
+    },
+    servers: [
+      {
+        url: "http://localhost:3001",
+      },
+    ],
+  },
+  apis: ["./src/routes/*.js"],
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 const app = express();
 
@@ -30,6 +51,13 @@ app.get("/", (req, res) => {
     message: "hello world",
   });
 });
+
+// Serve generated OpenAPI specification and optional Swagger UI.
+app.get("/openapi.json", (req, res) => {
+  res.type("application/json").send(swaggerSpec);
+});
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api", routes);
 
