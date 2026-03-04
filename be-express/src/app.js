@@ -30,18 +30,34 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 const app = express();
+const corsAllowlist = new Set(env.CORS_ALLOWED_ORIGINS);
+
+app.set("trust proxy", 1);
 
 app.use(morgan("dev"));
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || corsAllowlist.has(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(null, false);
+  },
+}));
 app.use(express.json());
 
 const limiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
   limit: env.RATE_LIMIT_MAX_REQUESTS,
-  message: "Too many requests from this IP, please try again later",
   standardHeaders: "draft-7",
   legacyHeaders: false,
+  handler(_req, res) {
+    res.status(429).json({
+      error: "Too many requests from this IP, please try again later",
+    });
+  },
 });
 
 app.use(limiter);

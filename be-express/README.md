@@ -1,53 +1,64 @@
-# Express API Starter
+# Maps Backend (Express)
 
-A JavaScript Express v5 starter template with sensible defaults. For a TypeScript starter see the [express-api-starter-ts](https://github.com/w3cj/express-api-starter-ts)
+Backend service for place search + direction links used by Open WebUI tool calling.
 
-How to use this template:
+## What it does
 
-```sh
-pnpm dlx create-express-api@latest --directory my-api-name
-```
+- Exposes `GET /api/maps/search` for Google Maps Places text search.
+- Returns normalized places with:
+  - `maps_url` (open place in Google Maps)
+  - `directions_url` (open route to destination)
+  - `embed_url` (optional iframe URL when browser embed key is configured)
+- Serves OpenAPI JSON at `/openapi.json` and Swagger UI at `/api-docs`.
 
-Includes API Server utilities:
+## Environment variables
 
-- [morgan](https://www.npmjs.com/package/morgan)
-  - HTTP request logger middleware for node.js
-- [helmet](https://www.npmjs.com/package/helmet)
-  - Helmet helps you secure your Express apps by setting various HTTP headers. It's not a silver bullet, but it can help!
-- [cors](https://www.npmjs.com/package/cors)
-  - CORS is a node.js package for providing a Connect/Express middleware that can be used to enable CORS with various options.
+Required (outside test env):
 
-Development utilities:
+- `GOOGLE_MAPS_API_KEY`: server-side key used for Places API calls.
 
-- [eslint](https://www.npmjs.com/package/eslint)
-  - ESLint is a tool for identifying and reporting on patterns found in ECMAScript/JavaScript code.
-- [vitest](https://www.npmjs.com/package/vitest)
-  - Next generation testing framework powered by Vite.
-- [zod](https://www.npmjs.com/package/zod)
-  - Validated env with zod schema
-- [supertest](https://www.npmjs.com/package/supertest)
-  - HTTP assertions made easy via superagent.
+Optional:
 
-## Setup
+- `GOOGLE_MAPS_EMBED_API_KEY`: browser-restricted key for embed URLs.
+- `PORT` (default `3000`)
+- `RATE_LIMIT_WINDOW_MS` (default `90000`)
+- `RATE_LIMIT_MAX_REQUESTS` (default `100`)
+- `MAPS_RATE_LIMIT_WINDOW_MS` (default `60000`)
+- `MAPS_RATE_LIMIT_MAX_REQUESTS` (default `30`)
+- `CORS_ALLOWED_ORIGINS` (default `http://localhost:3000`, comma-separated)
+- `GOOGLE_MAPS_TIMEOUT_MS` (default `8000`)
 
-```
-pnpm install
-```
+Use `.env.sample` as a reference.
 
-## Lint
+## Security notes
 
-```
-pnpm run lint
-```
-
-## Test
-
-```
-pnpm test
-```
+- Keep `GOOGLE_MAPS_API_KEY` server-only. It is never returned in API payloads.
+- If you enable embeds, restrict `GOOGLE_MAPS_EMBED_API_KEY` by HTTP referrer.
+- Configure Google quota alerts and caps to control API usage cost.
+- CORS and rate limiting are enabled by default.
 
 ## Development
 
+Install dependencies:
+
+```bash
+pnpm install
 ```
-pnpm run dev
+
+Run locally:
+
+```bash
+pnpm dev
+```
+
+Run tests:
+
+```bash
+pnpm test
+```
+
+Run lint:
+
+```bash
+pnpm lint
 ```

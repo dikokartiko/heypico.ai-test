@@ -1,44 +1,74 @@
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../src/services/google-map.js", () => ({
-  searchPlace: vi.fn(),
+const { searchPlaceMock } = vi.hoisted(() => ({
+  searchPlaceMock: vi.fn(),
 }));
 
+vi.mock("../../src/services/google-map.js", () => {
+  class GoogleMapsServiceError extends Error {
+    constructor(message, statusCode = 502) {
+      super(message);
+      this.statusCode = statusCode;
+    }
+  }
+
+  return {
+    GoogleMapsServiceError,
+    searchPlace: searchPlaceMock,
+  };
+});
+
 import app from "../../src/app.js";
-import { searchPlace } from "../../src/services/google-map.js";
 
 const mockResult = {
-  name: "Coffee Shop",
-  address: "123 Bean St",
-  map_link: "https://www.google.com/maps?q=0,0",
-  embed_html: "<iframe></iframe>",
+  query: "coffee shop",
+  results: [
+    {
+      address: "123 Bean St",
+      directions_url: "https://www.google.com/maps/dir/?api=1&destination=0,0",
+      embed_url: "https://www.google.com/maps/embed/v1/place?key=embed-key&q=Coffee+Shop",
+      location: {
+        lat: 0,
+        lng: 0,
+      },
+      maps_url: "https://www.google.com/maps/search/?api=1&query=0,0",
+      name: "Coffee Shop",
+      place_id: "place-1",
+    },
+  ],
+  total: 1,
 };
 
 describe("GET /api/maps/search", () => {
-  let consoleErrorSpy;
-
   beforeEach(() => {
-    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    searchPlace.mockReset();
+    searchPlaceMock.mockReset();
   });
 
   afterEach(() => {
-    consoleErrorSpy.mockRestore();
     vi.clearAllMocks();
   });
 
   it("returns search results when query is valid", async () => {
-    searchPlace.mockResolvedValue(mockResult);
+    searchPlaceMock.mockResolvedValue(mockResult);
 
     const response = await request(app)
       .get("/api/maps/search")
-      .query({ q: "coffee shop" })
+      .query({
+        limit: 2,
+        origin: "Monas Jakarta",
+        q: "coffee shop",
+        travel_mode: "walking",
+      })
       .expect("Content-Type", /json/)
       .expect(200);
 
     expect(response.body).toEqual(mockResult);
-    expect(searchPlace).toHaveBeenCalledWith("coffee shop");
+    expect(searchPlaceMock).toHaveBeenCalledWith("coffee shop", {
+      limit: 2,
+      origin: "Monas Jakarta",
+      travelMode: "walking",
+    });
   });
 
   it("rejects queries shorter than minimum length", async () => {
@@ -48,19 +78,35 @@ describe("GET /api/maps/search", () => {
       .expect("Content-Type", /json/)
       .expect(400);
 
-    expect(response.body.error).toContain("query required");
-    expect(searchPlace).not.toHaveBeenCalled();
+    expect(response.body.error).toContain("at least 2");
+    expect(searchPlaceMock).not.toHaveBeenCalled();
   });
 
-  it("handles downstream service errors", async () => {
-    searchPlace.mockRejectedValue(new Error("Service failure"));
+  it("rejects limit values outside allowed range", async () => {
+    const response = await request(app)
+      .get("/api/maps/search")
+      .query({
+        limit: 99,
+        q: "coffee shop",
+      })
+      .expect("Content-Type", /json/)
+      .expect(400);
+
+    expect(response.body.error).toContain("less than or equal");
+    expect(searchPlaceMock).not.toHaveBeenCalled();
+  });
+
+  it("maps downstream service errors to their status code", async () => {
+    const quotaError = new Error("Quota exceeded");
+    quotaError.statusCode = 429;
+    searchPlaceMock.mockRejectedValue(quotaError);
 
     const response = await request(app)
       .get("/api/maps/search")
       .query({ q: "coffee shop" })
       .expect("Content-Type", /json/)
-      .expect(400);
+      .expect(429);
 
-    expect(response.body.error).toBe("Service failure");
+    expect(response.body.error).toBe("Quota exceeded");
   });
 });

@@ -8,19 +8,34 @@ This workspace ships a containerized Express backend (`maps-backend`) plus the s
 
 - Docker Engine and Docker Compose plugin
 - (Optional) Node.js 20+ if you want to run or test the backend outside of Docker
-- A Google Maps API key for the backend search functionality
+- A Google Maps server API key (required)
+- (Optional) A browser-restricted Google Maps Embed API key for iframe embeds
 
 ## Configuration
 
-Create a `.env` file at the repository root (next to `docker-compose.yml`) and add any secrets you need. Only `GOOGLE_MAPS_API_KEY` is required for the backend to perform map lookups; the others fall back to sane defaults:
+Create a `.env` file at the repository root (next to `docker-compose.yml`) and add your secrets. Only `GOOGLE_MAPS_API_KEY` is required for the backend to perform map lookups:
 
 ```env
-GOOGLE_MAPS_API_KEY=your_api_key_here
+GOOGLE_MAPS_API_KEY=your_server_side_api_key
+# Optional browser key for embed URLs (restrict this key by HTTP referrer)
+# GOOGLE_MAPS_EMBED_API_KEY=your_browser_embed_api_key
+
 # Optional overrides:
 # RATE_LIMIT_WINDOW_MS=90000
 # RATE_LIMIT_MAX_REQUESTS=100
+# MAPS_RATE_LIMIT_WINDOW_MS=60000
+# MAPS_RATE_LIMIT_MAX_REQUESTS=30
+# CORS_ALLOWED_ORIGINS=http://localhost:3000
+# GOOGLE_MAPS_TIMEOUT_MS=8000
 # PORT=3001
 ```
+
+### Google Maps security checklist
+
+1. Use a dedicated **server key** for Places API calls (`GOOGLE_MAPS_API_KEY`) and restrict it by API + source IP where possible.
+2. If you need iframe embeds, use a separate **browser key** (`GOOGLE_MAPS_EMBED_API_KEY`) and restrict it by HTTP referrer.
+3. Configure Google Cloud quota alerts and daily caps to prevent unbounded spend.
+4. Rotate both keys periodically and immediately after suspected exposure.
 
 ## Run the stack
 
